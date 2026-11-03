@@ -60,8 +60,8 @@
                 <td>{{ translateCategory(item.category) }}</td>
                 <td><strong>{{ item.quantity_on_hand }}</strong></td>
                 <td>{{ item.reorder_point }}</td>
-                <td>{{ currencySymbol }}{{ item.unit_cost.toFixed(2) }}</td>
-                <td><strong>{{ currencySymbol }}{{ (item.quantity_on_hand * item.unit_cost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</strong></td>
+                <td>{{ formatCurrencyWithDecimals(item.unit_cost, currentCurrency, 2) }}</td>
+                <td><strong>{{ formatCurrencyWithDecimals(item.quantity_on_hand * item.unit_cost, currentCurrency, 2) }}</strong></td>
                 <td>{{ translateWarehouse(item.location) }}</td>
                 <td>
                   <span :class="['badge', getStockStatusClass(item)]">
@@ -88,6 +88,7 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { api } from '../api'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
+import { formatCurrencyWithDecimals } from '../utils/currency'
 import InventoryDetailModal from '../components/InventoryDetailModal.vue'
 
 export default {
@@ -97,10 +98,6 @@ export default {
   },
   setup() {
     const { t, currentCurrency, translateProductName, translateWarehouse } = useI18n()
-
-    const currencySymbol = computed(() => {
-      return currentCurrency.value === 'JPY' ? '¥' : '$'
-    })
 
     const loading = ref(true)
     const error = ref(null)
@@ -216,9 +213,10 @@ export default {
       showItemModal,
       selectedItem,
       showItemDetail,
-      currencySymbol,
       translateProductName,
-      translateWarehouse
+      translateWarehouse,
+      currentCurrency,
+      formatCurrencyWithDecimals
     }
   }
 }
