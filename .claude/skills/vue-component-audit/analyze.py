@@ -85,7 +85,9 @@ def read_body(src, pos):
 
 
 def strip_comments(src):
-    return LINE_COMMENT.sub("", BLOCK_COMMENT.sub("", src))
+    # Line numbers of functions are counted in the stripped text, so newlines must survive.
+    keep_newlines = lambda m: "\n" * m.group().count("\n")
+    return LINE_COMMENT.sub(keep_newlines, BLOCK_COMMENT.sub(keep_newlines, src))
 
 
 def extract_functions(src):
