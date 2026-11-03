@@ -56,7 +56,7 @@
                     <div class="items-dropdown">
                       <div v-for="(item, idx) in order.items" :key="idx" class="item-entry">
                         <span class="item-name">{{ translateProductName(item.name) }}</span>
-                        <span class="item-meta">{{ t('orders.quantity') }}: {{ item.quantity }} @ {{ currencySymbol }}{{ item.unit_price }}</span>
+                        <span class="item-meta">{{ t('orders.quantity') }}: {{ item.quantity }} @ {{ formatAmount(item.unit_price) }}</span>
                       </div>
                     </div>
                   </details>
@@ -68,7 +68,43 @@
                 </td>
                 <td class="col-date">{{ formatDate(order.order_date) }}</td>
                 <td class="col-date">{{ formatDate(order.expected_delivery) }}</td>
-                <td class="col-value"><strong>{{ currencySymbol }}{{ order.total_value.toLocaleString() }}</strong></td>
+                <td class="col-value"><strong>{{ formatAmount(order.total_value) }}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">{{ t('orders.submittedOrders') }} ({{ restockingOrders.length }})</h3>
+        </div>
+        <div v-if="restockingError" class="error">{{ restockingError }}</div>
+        <div v-else-if="restockingOrders.length === 0" class="loading">{{ t('orders.noSubmittedOrders') }}</div>
+        <div v-else class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ t('orders.submittedTable.orderId') }}</th>
+                <th>{{ t('orders.submittedTable.items') }}</th>
+                <th>{{ t('orders.submittedTable.total') }}</th>
+                <th>{{ t('orders.submittedTable.created') }}</th>
+                <th>{{ t('orders.submittedTable.expectedDelivery') }}</th>
+                <th>{{ t('orders.submittedTable.leadTime') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="ro in restockingOrders" :key="ro.id">
+                <td><strong>{{ ro.id }}</strong></td>
+                <td>
+                  <div v-for="line in ro.items" :key="line.item_sku" class="restock-line">
+                    {{ line.item_sku }} x {{ line.quantity }}
+                  </div>
+                </td>
+                <td><strong>{{ formatAmount(ro.total_cost) }}</strong></td>
+                <td>{{ formatDate(ro.created_date) }}</td>
+                <td>{{ formatDate(ro.expected_delivery_date) }}</td>
+                <td>{{ ro.lead_time_days }}</td>
               </tr>
             </tbody>
           </table>
@@ -79,22 +115,23 @@
 </template>
 
 <script>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { api } from '../api'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
+import { formatCurrencyWithDecimals } from '../utils/currency'
 
 export default {
   name: 'Orders',
   setup() {
     const { t, currentCurrency, translateProductName, translateCustomerName } = useI18n()
 
-    const currencySymbol = computed(() => {
-      return currentCurrency.value === 'JPY' ? '¥' : '$'
-    })
+    const formatAmount = (usd) => formatCurrencyWithDecimals(usd, currentCurrency.value, 2)
     const loading = ref(true)
     const error = ref(null)
     const orders = ref([])
+    const restockingOrders = ref([])
+    const restockingError = ref(null)
 
     // Use shared filters
     const {
@@ -121,6 +158,14 @@ export default {
         error.value = 'Failed to load orders: ' + err.message
       } finally {
         loading.value = false
+      }
+    }
+
+    const loadRestockingOrders = async () => {
+      try {
+        restockingOrders.value = await api.getRestockingOrders()
+      } catch (err) {
+        restockingError.value = 'Failed to load submitted orders: ' + err.message
       }
     }
 
@@ -153,17 +198,22 @@ export default {
       })
     }
 
-    onMounted(loadOrders)
+    onMounted(() => {
+      loadOrders()
+      loadRestockingOrders()
+    })
 
     return {
       t,
       loading,
       error,
       orders,
+      restockingOrders,
+      restockingError,
       getOrdersByStatus,
       getOrderStatusClass,
       formatDate,
-      currencySymbol,
+      formatAmount,
       translateProductName,
       translateCustomerName
     }
@@ -275,5 +325,9 @@ export default {
 .item-meta {
   font-size: 0.813rem;
   color: #64748b;
+}
+
+.restock-line {
+  white-space: nowrap;
 }
 </style>

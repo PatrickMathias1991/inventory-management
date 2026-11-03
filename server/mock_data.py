@@ -35,5 +35,11 @@ recent_transactions = load_json_file('transactions.json')
 # Load purchase orders
 purchase_orders = load_json_file('purchase_orders.json')
 
+# Submitted restocking orders; main.py appends to this same list object, so never rebind it
+restocking_orders = []
+
+# main.py mutates this list in place, so never rebind it
+tasks = []
+
 # All data is now loaded from JSON files in the data/ directory
 # This allows for easier maintenance and updates of the sample data

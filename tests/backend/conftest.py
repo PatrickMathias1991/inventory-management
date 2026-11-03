@@ -14,6 +14,16 @@ sys.path.insert(0, str(server_path))
 from main import app
 
 
+@pytest.fixture(autouse=True)
+def reset_mutable_data():
+    import mock_data
+
+    purchase_orders_snapshot = list(mock_data.purchase_orders)
+    yield
+    mock_data.purchase_orders[:] = purchase_orders_snapshot
+    mock_data.tasks.clear()
+
+
 @pytest.fixture
 def client():
     """Create a test client for the FastAPI application."""
